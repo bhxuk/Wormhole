@@ -3,3 +3,5 @@ iso/
 *.iso
 *.qcow2
 .env
+__pycache__/
+*.pyc

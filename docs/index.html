@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wormhole - Windows 11 in Docker</title>
+<meta name="description" content="Run Windows 11 in Docker on any Linux server. One command install, RDP and browser access, persistent disk. Created by bhxuk.com.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='none' stroke='%236c8cff' stroke-width='6'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%236c8cff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg:#f7f8fb; --panel:#ffffff; --line:#e3e6ee; --text:#151a24; --muted:#5d6678;
+    --accent:#3d5afe; --accent-soft:#e8ecff; --code:#0f1420; --code-text:#e6ebf5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b0d12; --panel:#131720; --line:#232a36; --text:#e7ebf2; --muted:#93a0b5;
+            --accent:#7d95ff; --accent-soft:#1a2140; --code:#070910; --code-text:#e6ebf5; }
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--accent); }
+  .wrap { max-width:1040px; margin:0 auto; padding:0 16px; }
+  nav { position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  nav .wrap { display:flex; align-items:center; gap:20px; height:56px; }
+  nav .logo { font-weight:800; color:var(--text); text-decoration:none; display:flex; align-items:center; gap:8px; }
+  nav .links { margin-left:auto; display:flex; gap:18px; flex-wrap:wrap; }
+  nav .links a { color:var(--muted); text-decoration:none; font-size:15px; }
+  nav .links a:hover { color:var(--text); }
+  .hero { padding:72px 0 48px; }
+  .badge { display:inline-block; background:var(--accent-soft); color:var(--accent); border-radius:99px; padding:3px 12px; font-size:13px; font-weight:600; }
+  h1 { font-size:clamp(34px,6vw,56px); line-height:1.08; margin:16px 0 14px; letter-spacing:-.02em; }
+  .lead { font-size:19px; color:var(--muted); max-width:640px; margin:0 0 28px; }
+  .cmd { display:flex; align-items:center; gap:10px; background:var(--code); color:var(--code-text); border-radius:12px; padding:14px 14px 14px 18px; font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; max-width:760px; }
+  .cmd code { flex:1; overflow-x:auto; white-space:nowrap; }
+  .cmd button { flex:none; background:#26304a; color:#fff; border:0; border-radius:8px; padding:7px 12px; cursor:pointer; font:600 13px system-ui,sans-serif; }
+  .cmd button:hover { background:#34406a; }
+  .sub { color:var(--muted); font-size:14px; margin-top:10px; }
+  section { padding:48px 0; border-top:1px solid var(--line); }
+  h2 { font-size:28px; margin:0 0 8px; letter-spacing:-.01em; }
+  .muted { color:var(--muted); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-top:24px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; }
+  .card h3 { margin:0 0 6px; font-size:17px; }
+  .card p { margin:0; color:var(--muted); font-size:15px; }
+  ol.steps { counter-reset:s; list-style:none; padding:0; margin:24px 0 0; display:grid; gap:12px; }
+  ol.steps li { counter-increment:s; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px 14px 58px; position:relative; }
+  ol.steps li::before { content:counter(s); position:absolute; left:16px; top:13px; width:28px; height:28px; border-radius:50%; background:var(--accent-soft); color:var(--accent); font-weight:700; display:grid; place-items:center; font-size:14px; }
+  table { border-collapse:collapse; width:100%; margin-top:20px; background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:15px; }
+  th, td { text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr:last-child td { border-bottom:0; }
+  th { background:var(--accent-soft); font-size:14px; }
+  .table-wrap { overflow-x:auto; }
+  pre { background:var(--code); color:var(--code-text); padding:16px 18px; border-radius:12px; overflow-x:auto; font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.92em; }
+  p code, li code, td code { background:var(--accent-soft); padding:1px 6px; border-radius:6px; }
+  #changelog h2 { font-size:22px; margin-top:28px; }
+  #changelog h3 { font-size:16px; color:var(--muted); margin:16px 0 4px; }
+  #changelog ul { margin:6px 0; padding-left:22px; }
+  #changelog .entry { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:4px 22px 16px; margin-top:16px; }
+  details { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin-top:10px; }
+  summary { cursor:pointer; font-weight:600; }
+  footer { border-top:1px solid var(--line); padding:28px 0 40px; color:var(--muted); font-size:14px; }
+  footer .wrap { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#"><svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="6"/><circle cx="32" cy="32" r="12" fill="var(--accent)"/></svg>Wormhole</a>
+    <div class="links">
+      <a href="#install">Install</a><a href="#connect">Connect</a><a href="#manage">Manage</a>
+      <a href="#faq">FAQ</a><a href="#changelog">Changelog</a>
+      <a href="https://github.com/bhxuk/Wormhole">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="badge" id="ver">Open source · MIT</span>
+    <h1>Windows 11 in Docker.<br>One command.</h1>
+    <p class="lead">Wormhole installs Windows 11 as a container on any Linux server, then gives you Remote Desktop and a desktop in your browser. Windows stays on disk - restarts never reset it.</p>
+    <div class="cmd"><code id="one">curl -fsSL https://raw.githubusercontent.com/bhxuk/Wormhole/main/install.sh | sudo bash</code><button type="button" data-copy="one">Copy</button></div>
+    <p class="sub">Needs a Linux x86_64 server with KVM and the official Windows 11 ISO from Microsoft.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>What you get</h2>
+    <div class="grid">
+      <div class="card"><h3>Guided installer</h3><p>A few questions - ISO, location, ports, login - with a summary to confirm before anything starts.</p></div>
+      <div class="card"><h3>Hands-off setup</h3><p>Windows installs itself unattended. No setup screens, no Microsoft account.</p></div>
+      <div class="card"><h3>Browser desktop</h3><p>Open <code>http://server:8006</code> and use Windows from any device.</p></div>
+      <div class="card"><h3>Remote Desktop</h3><p>Full RDP on a port you pick, plus a ready-made <code>.rdp</code> file.</p></div>
+      <div class="card"><h3>Persistent</h3><p>The same Windows boots every time - container, Docker and server reboots included.</p></div>
+      <div class="card"><h3>Easy updates</h3><p><code>wormhole update</code> pulls the latest version and keeps your Windows disk.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <p class="muted">Takes a couple of minutes, then Windows installs itself in 10-30 minutes.</p>
+    <ol class="steps">
+      <li><b>Download the ISO</b> from <a href="https://www.microsoft.com/en-gb/software-download/windows11" target="_blank" rel="noopener">microsoft.com/software-download/windows11</a> - choose <i>Download Windows 11 Disk Image (ISO) for x64 devices</i> - and copy it to your server. Any file name containing <code>windows11</code> or <code>win11</code> is found automatically.</li>
+      <li><b>Run the installer</b> as root: <code>curl -fsSL https://raw.githubusercontent.com/bhxuk/Wormhole/main/install.sh | sudo bash</code></li>
+      <li><b>Confirm the ISO</b> it found, and where to install (default <code>/opt/wormhole</code>).</li>
+      <li><b>Pick resources and ports</b> - CPU, RAM, disk, and easy free ports like 8006 / 8080 for the browser and 3389 / 3390 for RDP.</li>
+      <li><b>Set the login</b> - computer (RDP) name, username and password, or let it generate one.</li>
+      <li><b>Confirm</b> the summary and the files created. Wormhole starts and prints your browser URL, RDP address and login.</li>
+    </ol>
+    <h3 style="margin-top:32px">Requirements</h3>
+    <div class="table-wrap"><table>
+      <tr><th>Server</th><td>Linux, x86_64, hardware virtualisation (<code>/dev/kvm</code>). A VPS needs nested virtualisation.</td></tr>
+      <tr><th>Resources</th><td>2+ CPU cores, 4+ GB RAM and 40+ GB disk for Windows (more is better).</td></tr>
+      <tr><th>Software</th><td>Docker with Compose - the installer can install it.</td></tr>
+      <tr><th>Windows</th><td>Your own official Windows 11 ISO and licence.</td></tr>
+    </table></div>
+  </div>
+</section>
+
+<section id="connect">
+  <div class="wrap">
+    <h2>Connect</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Browser</th><td><code>http://&lt;server-ip&gt;:&lt;web-port&gt;</code> - watch the install, then use the desktop.</td></tr>
+      <tr><th>RDP</th><td><code>&lt;server-ip&gt;:&lt;rdp-port&gt;</code> in Remote Desktop Connection, Microsoft Remote Desktop / Windows App or Remmina.</td></tr>
+      <tr><th>RDP file</th><td><code>/opt/wormhole/&lt;NAME&gt;.rdp</code> - copy to your PC and double-click.</td></tr>
+      <tr><th>Details</th><td>Run <code>wormhole info</code> on the server at any time.</td></tr>
+    </table></div>
+  </div>
+</section>
+
+<section id="manage">
+  <div class="wrap">
+    <h2>Manage</h2>
+<pre>wormhole info        connection details (browser URL, RDP, login)
+wormhole status      installing / ready / stopped
+wormhole start       start Windows
+wormhole stop        shut Windows down cleanly
+wormhole restart     restart Windows (keeps everything)
+wormhole logs        follow the container log
+wormhole update      update Wormhole - your Windows disk is kept
+wormhole edit        change ports / CPU / RAM
+wormhole uninstall   remove (asks before deleting Windows)</pre>
+    <p class="muted">Prefer Docker Compose? See the <a href="https://github.com/bhxuk/Wormhole#docker-compose-manual">manual setup and all settings</a>.</p>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>FAQ</h2>
+    <details><summary>Does Wormhole include or activate Windows?</summary><p>No. You download the official ISO from Microsoft. Setup uses Microsoft's generic key only to choose the edition - activate with your own licence in Settings → Activation.</p></details>
+    <details><summary>Will a reboot reset Windows?</summary><p>No. Windows lives in <code>/opt/wormhole/storage</code>. Container restarts, Docker restarts and server reboots all boot the same Windows. Only deleting that folder removes it.</p></details>
+    <details><summary>Can I change CPU, RAM or disk size later?</summary><p>Yes - run <code>wormhole edit</code>. The disk can grow (extend C: in Disk Management afterwards).</p></details>
+    <details><summary>The installer says /dev/kvm is missing.</summary><p>Turn on VT-x / AMD-V in the BIOS, or ask your hosting provider for nested virtualisation. Windows is unusably slow without it.</p></details>
+    <details><summary>How long does the install take?</summary><p>Usually 10-30 minutes depending on the server. Watch progress in the browser; RDP works once Windows reaches the desktop.</p></details>
+  </div>
+</section>
+
+<section id="changelog">
+  <div class="wrap">
+    <h2>Changelog</h2>
+    <p class="muted">Updated automatically on every release. <a href="https://github.com/bhxuk/Wormhole/blob/main/CHANGELOG.md">View on GitHub</a></p>
+    <div id="log"><p class="muted">Loading...</p></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Wormhole - created by <a href="https://bhxuk.com">bhxuk.com</a> · MIT licence</span>
+    <span>Windows is a trademark of Microsoft Corporation.</span>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(document.getElementById(btn.dataset.copy).textContent); btn.textContent = 'Copied'; }
+    catch (e) { btn.textContent = 'Select & copy'; }
+    setTimeout(() => btn.textContent = 'Copy', 1600);
+  }));
+
+  // Tiny Markdown renderer for CHANGELOG.md (headings, lists, links, code, bold).
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const inline = s => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\[([^\]]+)\]/g, '$1');
+  function render(md) {
+    let html = '', depth = 0, open = false;
+    const closeLists = () => { while (depth > 0) { html += '</ul>'; depth--; } };
+    for (const raw of md.split('\n')) {
+      const line = raw.replace(/\s+$/, '');
+      let m;
+      if (/^# /.test(line)) continue;
+      if ((m = line.match(/^## (.*)/))) { closeLists(); if (open) html += '</div>'; html += '<div class="entry"><h2>' + inline(m[1]) + '</h2>'; open = true; continue; }
+      if (!open) continue;
+      if ((m = line.match(/^### (.*)/))) { closeLists(); html += '<h3>' + inline(m[1]) + '</h3>'; continue; }
+      if ((m = line.match(/^(\s*)- (.*)/))) {
+        const level = Math.floor(m[1].length / 2) + 1;
+        while (depth < level) { html += '<ul>'; depth++; }
+        while (depth > level) { html += '</ul>'; depth--; }
+        html += '<li>' + inline(m[2]) + '</li>'; continue;
+      }
+      if (line.trim()) { closeLists(); html += '<p>' + inline(line) + '</p>'; }
+    }
+    closeLists(); if (open) html += '</div>';
+    return html || '<p class="muted">No entries yet.</p>';
+  }
+  fetch('CHANGELOG.md', { cache: 'no-store' }).then(r => r.ok ? r.text() : Promise.reject())
+    .then(md => {
+      document.getElementById('log').innerHTML = render(md);
+      const v = md.match(/^## \[?([0-9][^\]\s]*)/m);
+      if (v) document.getElementById('ver').textContent = 'v' + v[1] + ' · Open source · MIT';
+    })
+    .catch(() => { document.getElementById('log').innerHTML = '<p><a href="https://github.com/bhxuk/Wormhole/blob/main/CHANGELOG.md">Read the changelog on GitHub</a></p>'; });
+</script>
+</body>
+</html>

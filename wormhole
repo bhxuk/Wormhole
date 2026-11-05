@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# wormhole - manage your Windows 11 container
+# Created by bhxuk.com - https://github.com/bhxuk/Wormhole
+set -Eeuo pipefail
+
+RAW="https://raw.githubusercontent.com/bhxuk/Wormhole/main"
+CONF=/etc/wormhole.conf
+# shellcheck source=/dev/null
+[ -f "$CONF" ] && . "$CONF"
+DIR=${WORMHOLE_DIR:-/opt/wormhole}
+
+if [ -t 1 ]; then B=$'\e[1m'; G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; N=$'\e[0m'; else B=""; G=""; Y=""; R=""; N=""; fi
+fail() { printf '%s%s%s\n' "$R" "$*" "$N" >&2; exit 1; }
+
+need_install() { [ -f "$DIR/docker-compose.yml" ] || fail "Wormhole is not installed in $DIR. Run the installer first."; }
+compose() { (cd "$DIR" && docker compose "$@"); }
+envval() { (set +u; . "$DIR/.env"; eval "printf '%s' \"\${$1:-}\""); }
+host_ip() { ip route get 1.1.1.1 2>/dev/null | awk '{for (i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}' || true; }
+
+state() {
+  local s
+  s=$(curl -fs "http://127.0.0.1:$(envval WEB_PORT)/status.json" 2>/dev/null \
+      | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["state"]+" - "+d["message"])' 2>/dev/null || true)
+  if [ -z "$s" ]; then
+    if docker ps --format '{{.Names}}' | grep -qx wormhole; then s="starting"; else s="stopped"; fi
+  fi
+  echo "$s"
+}
+
+info() {
+  need_install
+  local ip; ip=$(host_ip); ip=${ip:-<server-ip>}
+  cat <<EOF
+
+  ${B}Wormhole${N} - Windows 11 in Docker - created by bhxuk.com
+  ----------------------------------------------------------------
+  Status     $(state)
+  Browser    http://$ip:$(envval WEB_PORT)
+  RDP        $ip:$(envval RDP_PORT)
+  RDP name   $(envval COMPUTER_NAME)
+  Username   $(envval USERNAME)
+  Password   $(envval PASSWORD)
+  RDP file   $DIR/$(envval COMPUTER_NAME).rdp
+  Location   $DIR
+  Disk used  $(du -sh "$DIR/storage" 2>/dev/null | cut -f1)
+
+EOF
+}
+
+usage() {
+  cat <<EOF
+${B}wormhole${N} - Windows 11 in Docker (bhxuk.com)
+
+  wormhole info        connection details (browser URL, RDP, login)
+  wormhole status      is Windows installing / running / stopped?
+  wormhole start       start Windows
+  wormhole stop        shut Windows down cleanly
+  wormhole restart     restart Windows (keeps everything)
+  wormhole logs        follow the container log
+  wormhole update      update Wormhole - your Windows disk is kept
+  wormhole edit        change ports / CPU / RAM, then restart
+  wormhole uninstall   remove the container (asks before deleting Windows)
+EOF
+}
+
+case "${1:-help}" in
+  info) info ;;
+  status) need_install; echo "$(state)" ;;
+  start) need_install; compose up -d; printf '%sStarted.%s Run %swormhole info%s for connection details.\n' "$G" "$N" "$B" "$N" ;;
+  stop) need_install; echo "Shutting Windows down cleanly (up to 2 minutes)..."; compose stop ;;
+  restart) need_install; compose stop; compose up -d; echo "Restarted." ;;
+  logs) need_install; compose logs -f --tail 200 ;;
+  edit) need_install; "${EDITOR:-nano}" "$DIR/.env"; compose up -d; echo "Applied." ;;
+  update)
+    need_install
+    [ "$(id -u)" -eq 0 ] || fail "Run as root: sudo wormhole update"
+    echo "Updating the wormhole command..."
+    tmp=$(mktemp); curl -fsSL "$RAW/wormhole" -o "$tmp" && install -m 755 "$tmp" /usr/local/bin/wormhole; rm -f "$tmp"
+    echo "Pulling the latest image..."
+    if compose pull -q; then compose up -d; printf '%sUpdated.%s Windows disk untouched.\n' "$G" "$N"
+    else printf '%sCould not pull the image - re-run the installer to build it locally.%s\n' "$Y" "$N"; fi ;;
+  uninstall)
+    need_install
+    [ "$(id -u)" -eq 0 ] || fail "Run as root: sudo wormhole uninstall"
+    compose down || true
+    printf 'Container removed. Your Windows disk is still in %s/storage.\n' "$DIR"
+    printf '%sType DELETE to also erase Windows and all files in %s%s (anything else keeps them): ' "$Y" "$DIR" "$N"
+    read -r ans </dev/tty || ans=""
+    if [ "$ans" = DELETE ] && [ -n "$DIR" ] && [ "$DIR" != / ]; then rm -rf "$DIR"; rm -f "$CONF" /usr/local/bin/wormhole; echo "Everything removed."
+    else echo "Kept $DIR. Re-run the installer to start it again."; fi ;;
+  *) usage ;;
+esac

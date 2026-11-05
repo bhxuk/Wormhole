@@ -1,0 +1,5 @@
+storage/
+iso/
+*.iso
+*.qcow2
+.env

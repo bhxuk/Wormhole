@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wormhole</title>
+<style>
+  :root { --bg:#0b0d12; --panel:#141821; --line:#232a36; --text:#e7ebf2; --muted:#8b95a7; --accent:#6c8cff; --ok:#3ecf8e; --warn:#f5b84b; --bad:#ff6b6b; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--text); font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  body { display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:12px; padding:8px 14px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .brand { font-weight:700; letter-spacing:.3px; }
+  .brand small { color:var(--muted); font-weight:400; margin-left:6px; }
+  .brand a { color:var(--muted); }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:99px; border:1px solid var(--line); color:var(--muted); }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--warn); }
+  .ready .dot { background:var(--ok); } .error .dot { background:var(--bad); }
+  .spacer { flex:1; }
+  button, a.btn { background:transparent; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:5px 12px; cursor:pointer; font:inherit; text-decoration:none; }
+  button:hover, a.btn:hover { border-color:var(--accent); }
+  #msg { color:var(--muted); }
+  iframe { flex:1; width:100%; border:0; background:#000; }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">Wormhole<small>by <a href="https://bhxuk.com" target="_blank" rel="noopener">bhxuk.com</a></small></span>
+  <span id="state" class="pill"><span class="dot"></span><span id="label">connecting</span></span>
+  <span id="msg"></span>
+  <span class="spacer"></span>
+  <a class="btn" href="vnc.html?autoconnect=true&amp;resize=scale&amp;reconnect=true" target="_blank" rel="noopener">New tab</a>
+  <button id="fs" type="button">Fullscreen</button>
+</header>
+<iframe id="screen" src="vnc.html?autoconnect=true&amp;resize=scale&amp;reconnect=true&amp;reconnect_delay=2000" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+<script>
+  const state = document.getElementById('state');
+  async function poll() {
+    try {
+      const r = await fetch('status.json?' + Date.now(), { cache: 'no-store' });
+      const s = await r.json();
+      state.className = 'pill ' + s.state;
+      document.getElementById('label').textContent = s.state + (s.computer ? ' · ' + s.computer : '');
+      document.getElementById('msg').textContent = s.message || '';
+      document.title = 'Wormhole · ' + (s.computer || '') + ' (' + s.state + ')';
+    } catch (e) {
+      state.className = 'pill error';
+      document.getElementById('label').textContent = 'offline';
+    }
+  }
+  poll(); setInterval(poll, 5000);
+  document.getElementById('fs').onclick = () => document.getElementById('screen').requestFullscreen();
+</script>
+</body>
+</html>

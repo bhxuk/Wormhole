@@ -4,6 +4,11 @@ All notable changes to Wormhole are listed here. Newest first.
 Versions follow [Semantic Versioning](https://semver.org/). Every push to `main`
 rebuilds the Docker image and the website automatically.
 
+## [1.0.1] - 2026-11-05
+
+### Fixed
+- Installer banner: the "Wormhole" logo was garbled in the terminal. It now prints cleanly.
+
 ## [1.0.0] - 2026-11-05
 
 ### Added

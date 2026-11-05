@@ -127,13 +127,17 @@ pick_port() {
 human() { numfmt --to=iec --suffix=B "$1" 2>/dev/null || echo "${1}B"; }
 
 banner() {
+  # Quoted heredoc: the art is printed exactly as written.
+  printf '\n%s%s' "$C" "$B"
+  cat <<'ART'
+  __        __                   _           _
+  \ \      / /__  _ __ _ __ ___ | |__   ___ | | ___
+   \ \ /\ / / _ \| '__| '_ ` _ \| '_ \ / _ \| |/ _ \
+    \ V  V / (_) | |  | | | | | | | | | (_) | |  __/
+     \_/\_/ \___/|_|  |_| |_| |_|_| |_|\___/|_|\___|
+ART
+  printf '%s\n' "$N"
   cat <<EOF
-${C}${B}
-   _      __                 __        __
-  | | /| / /__  ______ _  __/ /  ___  / /__
-  | |/ |/ / _ \\/ __/  ' \\/ _  _ \\/ _ \\/ / -_)
-  |__/|__/\\___/_/ /_/_/_/_//_/ \\___/_/\\__/
-${N}
   ${B}Windows 11 in Docker${N} - RDP + browser access
   Created by ${B}bhxuk.com${N}  -  https://github.com/${REPO}
 EOF
